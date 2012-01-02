@@ -409,11 +409,17 @@ class IniParser
     
     /**
      * Creates new IniParser object
-     * 
+     */
+    public this()
+    {
+        structure = IniParseStructure();
+    }
+    
+    /**
+     * Creates new IniParser object
+     *
      * Params:
-     *  delim   =   Characters used to split name/value pairs
-     *  comment =   Characters used to comment
-     *  sectiondelims   =   Character pairs used to open/close sections
+     *  iniStructure = Possible ini structure
      */
     public this( IniParseStructure iniStructure)
     {
@@ -536,11 +542,9 @@ class IniParser
         resetKey(tmp);
         buf = string.init;
         sectionName = string.init;
-        file = IniFile.init;
-        sectionCharUsed = (int[2]).init;
-        commentChars = delimChars = quoteChars = (char[]).init;
-        sectionChars = (char[][]).init;
-        section = &file;
+        ini = Ini.init;
+        structure = IniParseStructure.init;
+        section = &ini;
     }
     
     /**
@@ -564,7 +568,7 @@ class IniParser
      * Returns:
      *  IniSection
      */
-    public IniFile parse(string source)
+    public Ini parse(string source)
     {
         foreach(i, c; source)
         {
@@ -590,7 +594,7 @@ class IniParser
             else if(isSectionOpen(c))
             {
                 state = State.Section;
-                section = &file;
+                section = &ini;
             }
             else if(isSectionClose(c))
             {
@@ -637,7 +641,7 @@ class IniParser
             prev = c;
         }
         
-        return file;
+        return ini;
     }
     
     /**
