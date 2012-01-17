@@ -4,7 +4,9 @@
  * Copyright: Robert Pasiński
  * License: MIT License
  */
-module DIni;
+module dini;
+
+import std.stdio;
 
 import std.string    : strip;
 import std.algorithm : countUntil;
@@ -305,6 +307,23 @@ struct IniSection
     }
     
     /**
+     * Returns sections array
+     */
+    public @property sections()
+    {
+        return _sections;
+    }
+    
+    /**
+     * Returns keys array
+     */
+    public @property keys()
+    {
+        return _keys;
+    }
+    
+    
+    /**
      * Section name
      * 
      * Returns:
@@ -413,6 +432,7 @@ class IniParser
     public this()
     {
         structure = IniParseStructure();
+        section = &ini;
     }
     
     /**
@@ -424,6 +444,7 @@ class IniParser
     public this( IniParseStructure iniStructure)
     {
         structure = iniStructure;
+        section = &ini;
     }
     
     /**
@@ -640,6 +661,9 @@ class IniParser
             
             prev = c;
         }
+        
+        tmp.value = buf;        
+        section.addKey(tmp);
         
         return ini;
     }
