@@ -8,7 +8,7 @@ module dini;
 
 import std.string    : strip;
 import std.algorithm : countUntil;
-import std.array     : split;
+import std.array     : split, replace;
 
 alias countUntil indexOf;
 
@@ -404,8 +404,11 @@ struct IniParseStructure
     /// If empty, inheriting is disabled
     char sectionInheritChar = ':';
     
+    /// Prefix and suffix of variable lookup
+    char variableLoopupChar = '%';
+    
     /// Section delimeter used to nest sections, if it is equals to string.init, section nesting is disabled
-    string sectionDelimeter;
+    string sectionDelimeter = ".";
 }
 
 struct IniPrintStructure
@@ -435,6 +438,15 @@ class IniParser
         
         /// Are we between quotes?
         bool inQuote;
+        
+        /// Are we in lookup?
+        bool inLookup;
+        
+        /// Lookup start offset
+        int lookupStart = -1;
+        
+        /// Current offset in buf
+        int offset;
         
         /// States
         enum State { Key, Value, Section, Comment };
@@ -591,6 +603,20 @@ class IniParser
     }
     
     /**
+     * Checks if specifies character begins or ends variable lookup
+     * 
+     * Params:
+     *  c = Character to check
+     *
+     * Returns:
+     *  True if it is, false otherwise
+     */
+    protected bool isVariableLookup(char c)
+    {
+        return (c == variableLoopupChar && inQuote == false && prev != '\\');
+    }
+    
+    /**
      * Resets parser data
      */
     public void reset()
@@ -650,6 +676,19 @@ class IniParser
             {
                 state = State.Comment;
             }
+            else if(isVariableLookup(c))
+            {
+                if(inLookup)
+                {
+                    string name = buf[lookupStart.. offset];
+                    buf.replace("%"~name~"%", section.getKey(name).value);
+                }
+                else
+                {
+                    inLookup = true;
+                    lookupStart = offset;
+                }
+            }
             else if(isSectionOpen(c))
             {
                 state = State.Section;
@@ -668,13 +707,13 @@ class IniParser
                     if(names.length > 1)
                     {
                         parentName = names[1].strip();
-                        writefln("%s inherits %s", sectionName, parentName); 
                     }
                 }
                 
                 if(sectionDelimeter != string.init)
                 {
-                    auto parts = buf.split(sectionDelimeter);
+                    auto parts = sectionName.split(sectionDelimeter);
+                    
                     
                     foreach(part; parts)
                     {
@@ -692,13 +731,16 @@ class IniParser
                 {
                     section.inherit(ini.getSection(parentName));
                 }
+                
                 buf = string.init;
+                offset = 0;
                 state = State.Key;
             }
             else if(isDelimeter(c))
             {
                 tmp.name = buf;
                 buf = string.init;
+                offset = 0;
                 state = State.Value;
             }
             else if(isValueEnd(c))
@@ -709,6 +751,7 @@ class IniParser
                 
                 section.addKey(tmp);
                 resetKey(tmp);
+                offset = 0;
             }
             else
             {
@@ -743,6 +786,8 @@ class IniParser
                 buf ~= c;
             }
         }
+        
+        offset++;
     }
 }
 
@@ -753,11 +798,11 @@ debug
     void main()
     {
          string c = "[def]
-foo1=bar1
-foo2=bar2
+name1=value1
+name2=value2
 
 [foo : def]
-foo1=bar3";
+name1=%name2%";
         auto iniParser = new IniParser();
         auto ini = iniParser.parse(c);
         writeln(ini.getSection("foo"));

@@ -7,13 +7,21 @@ that allows you to parse INI (or similar) configuration files easily.
 
 ## Features
 
- * __Easy to use__
+ - __Easy to use__
      
      Documentation and examples helps you understand library. It's also very nice to use :).
 
- * __Customisable__
+ - __Customisable__
      
      You can define your own INI delimeters, comment characters and others.
+ 
+ - __Variable lookups__
+     
+    You can "paste" defined variables values in values using `%variable%`
+ 
+ - __Section inheriting__   
+    
+    Sections can inherit values from other sections
 
 
 # Learning Dini
