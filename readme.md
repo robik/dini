@@ -30,12 +30,12 @@ that allows you to parse INI (or similar) configuration files easily.
 Let's check how it works in real life. In the examples, we'll use following configuration file:
 
 ```ini
-[db]
-driver=MySQL
-use=true
+[def]
+name1=value1
+name2=value2
 
-[db.main]
-hostname = localhost
+[foo : def]
+name1=Name1 from foo. Lookup for def.name2: %name2%
 ```
 
 The configuration is defining simple database details.
@@ -43,22 +43,25 @@ The configuration is defining simple database details.
 Now, lets try to parse it, we can do it with using code similar to:
 
 ```D
-import std.stdio, Dini;
-
+import std.stdio;
 void main()
 {
-    string file = "
-[db]
-driver=MySQL
-use=true
+     // Hard code the contents
+     string c = "[def]
+name1=value1
+name2=value2
 
-[db.main]
-hostname = localhost
-"; 
-    scope iniParser = new IniParser();
-    auto ini = iniParser.parse(file);
+[foo : def]
+name1=Name1 from foo. Lookup for def.name2: %name2%";
+
+    // create parser instance
+    auto iniParser = new IniParser();
     
-    // Do something with ini
+    // parse
+    auto ini = iniParser.parse(c);
+    
+    // write foo.name1 value
+    writeln(ini.getSection("foo")["name1"].value);
 }
 ```
 

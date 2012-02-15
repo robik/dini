@@ -809,9 +809,9 @@ name1=value1
 name2=value2
 
 [foo : def]
-name1=overriding %name2%";
+name1=Name1 from foo. Lookup for def.name2: %name2%";
         auto iniParser = new IniParser();
         auto ini = iniParser.parse(c);
-        writeln(ini.getSection("foo"));
+        writeln(ini.getSection("foo")["name1"].value);
     }
 }
