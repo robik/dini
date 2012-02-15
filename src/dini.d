@@ -6,8 +6,6 @@
  */
 module dini;
 
-import std.stdio;
-
 import std.string    : strip;
 import std.algorithm : countUntil;
 import std.array     : split;
@@ -111,7 +109,15 @@ struct IniSection
      */
     public void addKey(IniKey key)
     {
-        _keys ~= key;
+        auto pos = searchKey(key.name);
+        if(pos == -1)
+        {
+            _keys ~= key;
+        }
+        else
+        {
+            _keys[pos].value = key.value;
+        }
     }
     
     /**
@@ -126,9 +132,20 @@ struct IniSection
      * Returns:
      *  Section
      */
-    public ref IniSection getSection(string name)
+    public ref IniSection getSection(string name, char delim = 0)
     {
-        auto pos = searchSection(name);
+        if(delim != 0)
+        {
+            string[] parts = name.split((&delim)[0..1]);
+            IniSection* section = &this;
+            
+            foreach(part; parts)
+            {
+                section = &getSectionSafe(part);
+            }
+            return *section;
+        }
+        auto pos = searchSection(name, delim);
         
         if(pos == -1)
             throw new IniException("Requested section '" ~name ~"' does not exists");
@@ -148,11 +165,11 @@ struct IniSection
      * Returns:
      *  Requested section
      */
-    public ref IniSection getSectionSafe(string name)
+    public ref IniSection getSectionSafe(string name, char delim = 0)
     {
         try
         {
-            return getSection(name);
+            return getSection(name, delim);
         }
         catch(IniException e)
         {
@@ -170,14 +187,27 @@ struct IniSection
      * Returns:
      *  Offset, -1 if section does not exists
      */
-    protected int searchSection(string name)
+    protected int searchSection(string name, char delim = 0)
     {
-        foreach(i, section; _sections)
+        if(delim != 0)
         {
-            if(section.name == name)
+            string[] parts = name.split((&delim)[0..1]);
+            IniSection* section = &this;
+            
+            foreach(part; parts)
             {
-                return i;
-            } 
+                section = &getSectionSafe(part);
+            }
+        }
+        else
+        {
+            foreach(i, section; _sections)
+            {
+                if(section.name == name)
+                {
+                    return i;
+                } 
+            }
         }
         
         return -1;
@@ -333,6 +363,11 @@ struct IniSection
     {
         return _name;
     }
+    
+    public void inherit(IniSection section)
+    {
+        _keys = section.keys;
+    }
 }
 
 /// ditto
@@ -366,7 +401,10 @@ struct IniParseStructure
     
     char[][] sectionChars = [ ['[',']'] ];
     
-    /// Section delimeter used to nest sections, if it is equalts to string.init, section nesting is disabled
+    /// If empty, inheriting is disabled
+    char sectionInheritChar = ':';
+    
+    /// Section delimeter used to nest sections, if it is equals to string.init, section nesting is disabled
     string sectionDelimeter;
 }
 
@@ -620,6 +658,19 @@ class IniParser
             else if(isSectionClose(c))
             {
                 sectionName = buf;
+                string parentName;
+                
+                if(sectionInheritChar != 0)
+                {
+                    string[] names = buf.split((&sectionInheritChar)[0..1]);
+                    sectionName = names[0].strip();
+                    
+                    if(names.length > 1)
+                    {
+                        parentName = names[1].strip();
+                        writefln("%s inherits %s", sectionName, parentName); 
+                    }
+                }
                 
                 if(sectionDelimeter != string.init)
                 {
@@ -635,6 +686,11 @@ class IniParser
                 {
                     section.addSection(IniSection(sectionName));
                     section = &(section.getSection(sectionName));
+                }
+                
+                if(sectionInheritChar != 0 && parentName != "")
+                {
+                    section.inherit(ini.getSection(parentName));
                 }
                 buf = string.init;
                 state = State.Key;
@@ -687,5 +743,23 @@ class IniParser
                 buf ~= c;
             }
         }
+    }
+}
+
+debug
+{
+    
+    import std.stdio;
+    void main()
+    {
+         string c = "[def]
+foo1=bar1
+foo2=bar2
+
+[foo : def]
+foo1=bar3";
+        auto iniParser = new IniParser();
+        auto ini = iniParser.parse(c);
+        writeln(ini.getSection("foo"));
     }
 }
