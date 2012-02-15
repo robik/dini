@@ -8,7 +8,7 @@ module dini;
 
 import std.string    : strip;
 import std.algorithm : countUntil;
-import std.array     : split, replace;
+import std.array     : split, replaceInPlace;
 
 alias countUntil indexOf;
 
@@ -613,7 +613,7 @@ class IniParser
      */
     protected bool isVariableLookup(char c)
     {
-        return (c == variableLoopupChar && inQuote == false && prev != '\\');
+        return (c == variableLoopupChar && prev != '\\');
     }
     
     /**
@@ -680,8 +680,12 @@ class IniParser
             {
                 if(inLookup)
                 {
-                    string name = buf[lookupStart.. offset];
-                    buf.replace("%"~name~"%", section.getKey(name).value);
+                    if(lookupStart != -1)
+                    {
+                        string name = buf[lookupStart.. offset];
+                        buf.replaceInPlace(lookupStart, offset, section.getKey(name).value);
+                        lookupStart = -1;
+                    }
                 }
                 else
                 {
@@ -702,7 +706,10 @@ class IniParser
                 if(sectionInheritChar != 0)
                 {
                     string[] names = buf.split((&sectionInheritChar)[0..1]);
-                    sectionName = names[0].strip();
+                    if(names.length > 0)
+                    {
+                        sectionName = names[0].strip();
+                    }
                     
                     if(names.length > 1)
                     {
@@ -781,7 +788,7 @@ class IniParser
         }
         else
         {
-            if( strip((&c)[0..1]).length != 0 )
+            if( c != '\n' && c != '\r' )
             {
                 buf ~= c;
             }
@@ -802,7 +809,7 @@ name1=value1
 name2=value2
 
 [foo : def]
-name1=%name2%";
+name1=overriding %name2%";
         auto iniParser = new IniParser();
         auto ini = iniParser.parse(c);
         writeln(ini.getSection("foo"));
