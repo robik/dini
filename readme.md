@@ -42,7 +42,6 @@ name2=value2
 name1=Name1 from foo. Lookup for def.name2: %name2%
 ```
 
-The configuration is defining simple database details.
 
 Now, lets try to parse it, we can do it with using code similar to:
 
