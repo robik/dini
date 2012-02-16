@@ -14,6 +14,10 @@ that allows you to parse INI (or similar) configuration files easily.
  - __Customisable__
      
      You can define your own INI delimeters, comment characters and others.
+    
+ - __Well documented__
+     
+     The code is well documented, allowing you to understand it easier.
  
  - __Variable lookups__
      
