@@ -364,6 +364,12 @@ struct IniSection
         return _name;
     }
     
+    /**
+     * Inherits the specified section
+     *
+     * Params:
+     *  section = Section to inherit
+     */
     public void inherit(IniSection section)
     {
         _keys = section.keys;
@@ -411,23 +417,14 @@ struct IniParseStructure
     string sectionDelimeter = ".";
 }
 
-struct IniPrintStructure
-{
-    /// Comment character
-    char commentChar = ';';
-    
-    /// Delimeter character
-    char delimChar = '=';
-    
-    /// Section characters
-    char[] sectionChars = ['[',']'];
-    
-    /// Section delimeter used to nest sections, if it is equalts to string.init, section nesting is disabled
-    string sectionDelimeter;
-}
-
 /**
  * IniParser
+ *
+ * Example:
+ * -------------
+ * auto parser = new IniParser();
+ * auto parsed = parser.parse();
+ * -------------
  */
 class IniParser
 {
@@ -473,7 +470,12 @@ class IniParser
         int[2] sectionCharUsed;
     }
     
+    /**
+     * Ini parse details
+     */
     public IniParseStructure structure;
+    
+    /// ditto
     alias structure this;
     
     /**
@@ -795,23 +797,5 @@ class IniParser
         }
         
         offset++;
-    }
-}
-
-debug
-{
-    
-    import std.stdio;
-    void main()
-    {
-         string c = "[def]
-name1=value1
-name2=value2
-
-[foo : def]
-name1=Name1 from foo. Lookup for def.name2: %name2%";
-        auto iniParser = new IniParser();
-        auto ini = iniParser.parse(c);
-        writeln(ini.getSection("foo")["name1"].value);
     }
 }
