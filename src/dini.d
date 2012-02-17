@@ -27,7 +27,7 @@ struct IniKey
      */
     string value;
 
-    //alias value this;    
+    alias value this;    
     
     /**
      * Create new IniKey object
