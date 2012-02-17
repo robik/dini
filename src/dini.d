@@ -26,7 +26,8 @@ struct IniKey
      * Ini key value
      */
     string value;
-    
+
+    //alias value this;    
     
     /**
      * Create new IniKey object
@@ -414,7 +415,7 @@ struct IniParseStructure
     char variableLoopupChar = '%';
     
     /// Section delimeter used to nest sections, if it is equals to string.init, section nesting is disabled
-    string sectionDelimeter = ".";
+    char sectionDelimeter = '.';
 }
 
 /**
@@ -559,7 +560,7 @@ class IniParser
             
             if(pos != -1)
             {
-                if( prev == '\n' || prev == ']' || prev == char.init)
+                if( prev == '\n' || prev == ']' || prev == ' ' || prev == char.init)
                 {
                     sectionCharUsed = [i, pos];
                     return true;
@@ -702,7 +703,7 @@ class IniParser
             }
             else if(isSectionClose(c))
             {
-                sectionName = buf;
+                sectionName = buf.strip();
                 string parentName;
                 
                 if(sectionInheritChar != 0)
@@ -719,9 +720,9 @@ class IniParser
                     }
                 }
                 
-                if(sectionDelimeter != string.init)
+                if(sectionDelimeter != char.init)
                 {
-                    auto parts = sectionName.split(sectionDelimeter);
+                    auto parts = sectionName.split((&sectionDelimeter)[0..1]);
                     
                     
                     foreach(part; parts)
@@ -738,7 +739,7 @@ class IniParser
                 
                 if(sectionInheritChar != 0 && parentName != "")
                 {
-                    section.inherit(ini.getSection(parentName));
+                    section.inherit(ini.getSection(parentName, sectionDelimeter));
                 }
                 
                 buf = string.init;
@@ -747,14 +748,14 @@ class IniParser
             }
             else if(isDelimeter(c))
             {
-                tmp.name = buf;
+                tmp.name = buf.strip;
                 buf = string.init;
                 offset = 0;
                 state = State.Value;
             }
             else if(isValueEnd(c))
             {
-                tmp.value = buf;
+                tmp.value = buf.strip();
                 buf = string.init;
                 state = State.Key;
                 
@@ -797,5 +798,29 @@ class IniParser
         }
         
         offset++;
+    }
+}
+
+debug
+{
+    import std.stdio;
+    void main()
+    {
+         // Hard code the contents
+         string c = "[def]
+    name1=value1
+    name2=value2
+
+   [foo : def]
+   name1=Name1 from foo. Lookup for def.name2:%name1%";
+    
+        // create parser instance
+        auto iniParser = new IniParser();
+        
+        // parse
+        auto ini = iniParser.parse(c);
+    
+        // write foo.name1 value
+        writeln(ini.getSection("foo")["name1"]);
     }
 }
