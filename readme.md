@@ -77,6 +77,7 @@ void main()
 }
 ```
 
+
 ### Global Inheriting
 
 If you would like to inherit sections that are in another one, you can use  `.` at the beggining:
@@ -88,6 +89,7 @@ If you would like to inherit sections that are in another one, you can use  `.` 
 [b]
 ; Note the dot at beggining
 [b.c : .a.b]
+```
 
 
 ### Global lookups
