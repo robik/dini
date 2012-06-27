@@ -1,3 +1,4 @@
+
 /**
  * This file is part of Dini library
  * 
@@ -6,821 +7,525 @@
  */
 module dini;
 
-import std.string    : strip;
-import std.algorithm : countUntil;
-import std.array     : split, replaceInPlace;
+import std.stream : BufferedFile;
+import std.string : strip;
+import std.traits : isSomeString;
+import std.array  : split, indexOf, replaceInPlace, join;
+import std.algorithm : min, max, countUntil;
+import std.conv   : to;
 
-alias countUntil indexOf;
+import std.stdio;
 
-/**
- * Represents Ini key
- */
-struct IniKey
-{
-    /**
-     * Ini key name
-     */
-    string name;
-    
-    /**
-     * Ini key value
-     */
-    string value;
-
-    alias value this;    
-    
-    /**
-     * Create new IniKey object
-     * 
-     * Params:
-     *  name    =   Name of the key
-     *  value   =   Key value
-     */
-    public this(string name, string value)
-    {
-        this.name = name;
-        this.value = value;
-    }
-}
 
 /**
- * Represents IniSection
+ * Represents ini section
+ *
+ * Example:
+ * ---
+ * Ini ini = Ini.Parse("path/to/your.conf");
+ * ini.getKey("a");
+ * ---
  */
 struct IniSection
 {
-    protected
-    {
-        /**
-         * Section name
-         */
-        string _name;
-        
-        /**
-         * Keys defined in section
-         */
-        IniKey[] _keys;
-        
-        /**
-         * Sections in this section
-         */
-        IniSection[] _sections;
-    }
+    /// Section name
+    protected string         _name = "root";
+    
+    /// Parent
+    /// Null if none
+    protected IniSection*    _parent;
+    
+    /// Childs
+    protected IniSection[]   _sections;
+    
+    /// Keys
+    protected string[string] _keys;
+    
+    
     
     /**
-     * Creates new IniSection
-     * 
+     * Creates new IniSection instance
+     *
      * Params:
      *  name = Section name
      */
     public this(string name)
     {
         _name = name;
+        _parent = null;
+    }
+    
+    
+    /**
+     * Creates new IniSection instance
+     *
+     * Params:
+     *  name = Section name
+     *  parent = Section parent
+     */
+    public this(string name, IniSection* parent)
+    {
+        _name = name;
+        _parent = parent;
     }
     
     /**
-     * Checks if key with specified name exists
-     * 
+     * Sets section key
+     *
      * Params:
-     *  name    =   Key names
-     * 
-     * Returns:
-     *  True if key exists, false otherwise
+     *  name = Key name
+     *  value = Value to set
      */
-    public bool keyExists(string name)
+    public void setKey(string name, string value)
     {
-        return (searchKey(_name) != -1);
-    }   
+        _keys[name] = value;
+    }
     
     /**
-     * Adds new section
-     * 
+     * Checks if specified key exists
+     *
      * Params:
-     *  section =   Section to add
+     *  name = Key name
+     *
+     * Returns:
+     *  True if exists, false otherwise 
      */
-    public void addSection(IniSection section)
+    public bool hasKey(string name)
+    {
+        return (name in _keys) !is null;
+    }
+    
+    /**
+     * Gets key value
+     *
+     * Params:
+     *  name = Key name
+     *
+     * Returns:
+     *  Key value
+     *
+     * Throws:
+     *  IniException if key does not exists
+     */
+    public string getKey(string name)
+    {
+        if(!hasKey(name)) {
+            throw new IniException("Key '"~name~"' does not exists");
+        }
+        
+        return _keys[name];
+    }
+    
+    /**
+     * Removes key
+     *
+     * Params:
+     *  name = Key name
+     */
+    public void removeKey(string name)
+    {
+        _keys.remove(name);
+    }
+    
+    /**
+     * Adds section
+     *
+     * Params:
+     *  section = Section to add
+     */
+    public void addSection(ref IniSection section)
     {
         _sections ~= section;
     }
     
     /**
-     * Adds new key
-     * 
-     * Params:
-     *  key =   Key to add
-     */
-    public void addKey(IniKey key)
-    {
-        auto pos = searchKey(key.name);
-        if(pos == -1)
-        {
-            _keys ~= key;
-        }
-        else
-        {
-            _keys[pos].value = key.value;
-        }
-    }
-    
-    /**
-     * Returns section with specified name, if it does not exists, exception will be thrown.
-     * 
-     * Params:
-     *  name    =   Section name to get
-     * 
-     * Throws:
-     *  IniException if section does not exists
-     * 
-     * Returns:
-     *  Section
-     */
-    public ref IniSection getSection(string name, char delim = 0)
-    {
-        if(delim != 0)
-        {
-            string[] parts = name.split((&delim)[0..1]);
-            IniSection* section = &this;
-            
-            foreach(part; parts)
-            {
-                section = &getSectionSafe(part);
-            }
-            return *section;
-        }
-        auto pos = searchSection(name, delim);
-        
-        if(pos == -1)
-            throw new IniException("Requested section '" ~name ~"' does not exists");
-        
-        return _sections[pos]; 
-    }
-    
-    /// ditto
-    alias getSection opCall;
-    
-    /**
-     * Returns section with specified name, if section does not exists, it will be created.
-     * 
-     * Params:
-     *  name    =   Section name to get
-     * 
-     * Returns:
-     *  Requested section
-     */
-    public ref IniSection getSectionSafe(string name, char delim = 0)
-    {
-        try
-        {
-            return getSection(name, delim);
-        }
-        catch(IniException e)
-        {
-            addSection(IniSection(name));
-            return getSection(name);
-        }
-    }
-    
-    /**
-     * Searches sections array for section with specified name and return its offset, -1 if it does not exists
-     * 
-     * Params:
-     *  name    =   Section name
-     * 
-     * Returns:
-     *  Offset, -1 if section does not exists
-     */
-    protected int searchSection(string name, char delim = 0)
-    {
-        if(delim != 0)
-        {
-            string[] parts = name.split((&delim)[0..1]);
-            IniSection* section = &this;
-            
-            foreach(part; parts)
-            {
-                section = &getSectionSafe(part);
-            }
-        }
-        else
-        {
-            foreach(i, section; _sections)
-            {
-                if(section.name == name)
-                {
-                    return i;
-                } 
-            }
-        }
-        
-        return -1;
-    }
-    
-    /**
-     * Searches key array for key with specified name.
-     * 
-     * Params:
-     *  name    =   Key name
-     * 
-     * Returns:
-     *  Key offset in array, -1 if it does not exists
-     */
-    protected int searchKey(string name)
-    {
-        foreach(i, key; _keys)
-        {
-            if(key.name == name)
-            {
-                return i;
-            } 
-        }
-        
-        return -1;
-    }
-    
-    /**
-     * Returns key with specified name, throws exception if key does not exists
-     * 
-     * Params:
-     *  name    =   Name of the key
-     * 
-     * Throws:
-     *  IniException if key does not exists
-     * 
-     * Returns:
-     *  IniKey
-     */
-    public IniKey getKey(string name)
-    {
-        auto pos = searchKey(name);
-        
-        if(pos == -1)
-            throw new IniException("Key '"~name~"' does not exists");
-        
-        return _keys[pos];    
-    }
-    
-    /// ditto
-    alias getKey opIndex;
-    
-    
-    /**
-     * Sets key new value
-     * 
-     * Params:
-     *  name    =   Name of the key to change
-     *  value   =   New key value
-     */
-    public void setKey(string name, string value)
-    {
-        auto pos = searchKey(name);
-        
-        if(pos > -1)
-        {
-            _keys[pos].value = value;
-        }
-        else
-        {
-            _keys ~= IniKey(name, value);
-        }
-    }
-    
-    /**
-     * Allows for looping through sections
-     */
-    public int opApply(int delegate(ref IniSection) dg)
-    {
-        int res;
-        
-        foreach(section; _sections)
-        {
-            res = dg(section);
-            
-            if(res)
-                break;
-        }
-        
-        return res; 
-    }
-    
-    /**
-     * Allows for looping through keys
-     */
-    public int opApply(int delegate(ref string, ref string) dg)
-    {
-        int res;
-        
-        foreach(key; _keys)
-        {
-            res = dg(key.name, key.value);
-            
-            if(res)
-                break;
-        }
-        
-        return res; 
-    }
-    
-    /**
-     * Allows for looping through keys
-     */
-    public int opApply(int delegate(ref IniKey) dg)
-    {
-        int res;
-        
-        foreach(key; _keys)
-        {
-            res = dg(key);
-            
-            if(res)
-                break;
-        }
-        
-        return res; 
-    }
-    
-    /**
-     * Returns sections array
-     */
-    public @property sections()
-    {
-        return _sections;
-    }
-    
-    /**
-     * Returns keys array
-     */
-    public @property keys()
-    {
-        return _keys;
-    }
-    
-    
-    /**
-     * Section name
-     * 
-     * Returns:
-     *  Section name
-     */
-    public @property name()
-    {
-        return _name;
-    }
-    
-    /**
-     * Inherits the specified section
+     * Checks if specified section exists
      *
      * Params:
-     *  section = Section to inherit
-     */
-    public void inherit(IniSection section)
-    {
-        _keys = section.keys;
-    }
-}
-
-/// ditto
-alias IniSection Ini;
-
-
-
-/**
- * IniException
- * 
- * This exception is throwed when requested section/key does not exists
- */
-class IniException : Exception
-{
-    /**
-     * Creates new IniException object
-     */
-    this(string msg, string file = __FILE__, uint line = __LINE__)
-    {
-        super(msg, file, line);
-    }
-}
-
-struct IniParseStructure
-{
-    /// Available characters used to comment, default is ';'
-    char[] commentChars = [';'];
-    
-    /// Delimeter characters used to split name/value, default is '='
-    char[] delimChars = ['='];
-    
-    char[][] sectionChars = [ ['[',']'] ];
-    
-    /// If empty, inheriting is disabled
-    char sectionInheritChar = ':';
-    
-    /// Prefix and suffix of variable lookup
-    char variableLoopupChar = '%';
-    
-    /// Section delimeter used to nest sections, if it is equals to string.init, section nesting is disabled
-    char sectionDelimeter = '.';
-}
-
-/**
- * IniParser
- *
- * Example:
- * -------------
- * auto parser = new IniParser();
- * auto parsed = parser.parse();
- * -------------
- */
-class IniParser
-{
-    protected
-    {
-        /// Previous character
-        char prev;
-        
-        /// Are we between quotes?
-        bool inQuote;
-        
-        /// Are we in lookup?
-        bool inLookup;
-        
-        /// Lookup start offset
-        int lookupStart = -1;
-        
-        /// Current offset in buf
-        int offset;
-        
-        /// States
-        enum State { Key, Value, Section, Comment };
-        
-        /// Current state
-        State state;
-        
-        /// Key to operate on
-        IniKey tmp;
-        
-        /// Buffer
-        string buf;
-        
-        /// Current section name
-        string sectionName;
-        
-        /// Result
-        Ini ini;
-        
-        /// Pointer to section we are in
-        IniSection* section;
-        
-        /// Section open character used
-        int[2] sectionCharUsed;
-    }
-    
-    /**
-     * Ini parse details
-     */
-    public IniParseStructure structure;
-    
-    /// ditto
-    alias structure this;
-    
-    /**
-     * Creates new IniParser object
-     */
-    public this()
-    {
-        structure = IniParseStructure();
-        section = &ini;
-    }
-    
-    /**
-     * Creates new IniParser object
+     *  name = Section name
      *
-     * Params:
-     *  iniStructure = Possible ini structure
-     */
-    public this( IniParseStructure iniStructure)
-    {
-        structure = iniStructure;
-        section = &ini;
-    }
-    
-    /**
-     * Checks if specified character is delimeter
-     * 
-     * Params:
-     *  c   =   Character to check
-     * 
      * Returns:
-     *  True if it is, false otherwise
+     *  True if exists, false otherwise 
      */
-    protected bool isDelimeter(char c)
+    public bool hasSection(string name)
     {
-        return (delimChars.indexOf(c) != -1 && state == State.Key);
-    }
-    
-    /**
-     * Checks if specified character starts comment block
-     * 
-     * Params:
-     *  c   =   Character to check
-     * 
-     * Returns:
-     *  True if it is, false otherwise
-     */
-    protected bool isComment(char c)
-    {
-        return (commentChars.indexOf(c) != -1);
-    }
-    
-    /**
-     * Checks if specified character starts quote block
-     * 
-     * Params:
-     *  c   =   Character to check
-     * 
-     * Returns:
-     *  True if it is, false otherwise
-     */
-    protected bool isQuote(char c)
-    {
-        return (c == '"');
-    }
-    
-    /**
-     * Checks if specified character starts section name block
-     * 
-     * Params:
-     *  c   =   Character to check
-     * 
-     * Returns:
-     *  True if it is, false otherwise
-     */
-    protected bool isSectionOpen(char c)
-    {
-        int pos;
-        foreach(i, chars; sectionChars)
+        foreach(ref section; _sections)
         {
-            pos = chars.indexOf(c);
-            
-            if(pos != -1)
-            {
-                if( prev == '\n' || prev == ']' || prev == ' ' || prev == char.init)
-                {
-                    sectionCharUsed = [i, pos];
-                    return true;
-                }
-            }
+            if(section.name() == name)
+                return true;
         }
         
         return false;
     }
     
     /**
-     * Checks if specified character closes section name block
-     * 
+     * Returns reference to section
+     *
      * Params:
-     *  c   =   Character to check
-     * 
-     * Returns:
-     *  True if it is, false otherwise
-     */
-    protected bool isSectionClose(char c)
-    {
-        if(state != State.Section)
-            return false;
-        
-        if(c == sectionChars[sectionCharUsed[0]][sectionCharUsed[1] + 1])
-            return true;
-        
-        return false;    
-    }
-    
-    /**
-     * Checks if specified character ends value
-     * 
-     * Params:
-     *  c   =   Character to check
-     * 
-     * Returns:
-     *  True if it is, false otherwise
-     */
-    protected bool isValueEnd(char c)
-    {
-        return (c == '\n' && state == State.Value);
-    }
-    
-    /**
-     * Checks if specifies character begins or ends variable lookup
-     * 
-     * Params:
-     *  c = Character to check
+     *  Section name
      *
      * Returns:
-     *  True if it is, false otherwise
+     *  Section with specified name
      */
-    protected bool isVariableLookup(char c)
+    public ref IniSection getSection(string name)
     {
-        return (c == variableLoopupChar && prev != '\\');
-    }
-    
-    /**
-     * Resets parser data
-     */
-    public void reset()
-    {
-        prev = char.init;
-        inQuote = false;
-        state = State.Key;
-        resetKey(tmp);
-        buf = string.init;
-        sectionName = string.init;
-        ini = Ini.init;
-        structure = IniParseStructure.init;
-        section = &ini;
-    }
-    
-    /**
-     * Resets IniKey contents
-     * 
-     * Params:
-     *  key =   Key to reset
-     */
-    protected void resetKey(ref IniKey key)
-    {
-        key.name = "";
-        key.value = "";
-    }
-        
-    /**
-     * Parses ini string
-     * 
-     * Params:
-     *  source  =   Ini source
-     * 
-     * Returns:
-     *  IniSection
-     */
-    public Ini parse(string source)
-    {
-        foreach(i, c; source)
+        foreach(ref section; _sections)
         {
-            if(isQuote(c))
+            if(section.name() == name)
+                return section;
+        }
+        
+        throw new IniException("Section '"~name~"' does not exists");
+    }
+    
+    
+    /// ditto
+    public alias getSection opIndex;
+    
+    /**
+     * Removes section
+     *
+     * Params:
+     *  name = Section name
+     */
+    public void removeSection(string name)
+    {
+        IniSection[] childs;
+        
+        foreach(section; _sections)
+        {
+            if(section.name != name)
+                childs ~= section;
+        }
+        
+        _sections = childs;
+    }
+    
+    /**
+     * Section name
+     *
+     * Returns:
+     *  Section name
+     */
+    public string name() @property
+    {
+        return _name;
+    }
+    
+    /**
+     * Array of keys
+     *
+     * Returns:
+     *  Associative array of keys
+     */
+    public string[string] keys() @property
+    {
+        return _keys;
+    }
+    
+    /**
+     * Array of sections
+     *
+     * Returns:
+     *  Array of sections
+     */
+    public IniSection[] sections() @property
+    {
+        return _sections;
+    }
+    
+    /**
+     * Root section
+     */
+    public IniSection root() @property
+    {
+        IniSection s = this;
+        
+        while(s.getParent() != null)
+            s = *(s.getParent());
+            
+        return s;
+    }
+    
+    /**
+     * Section parent
+     *
+     * Returns:
+     *  Pointer to parent, or null if parent does not exists
+     */
+    public IniSection* getParent()
+    {
+        return _parent;
+    }
+    
+    /**
+     * Checks if current section has parent
+     *
+     * Returns:
+     *  True if section has parent, false otherwise
+     */
+    public bool hasParent()
+    {
+        return _parent != null;
+    }
+    
+    /**
+     * Moves current section to another one
+     *
+     * Params:
+     *  New parent
+     */
+    public void setParent(ref IniSection parent)
+    {
+        _parent.removeSection(this.name);
+        _parent = &parent;
+        parent.addSection(this);
+    }
+    
+    
+    /**
+     * Parses filename
+     *
+     * Params:
+     *  filename = Configuration filename
+     *  doLookups = Should variable lookups be resolved after parsing? 
+     */
+    public void parse(string filename, bool doLookups = true)
+    {
+        BufferedFile file = new BufferedFile(filename);
+        scope(exit) file.close;
+        
+        IniSection* section = &this;
+        
+        foreach(i, char[] line; file)
+        {
+            line = strip(line);
+            
+            // Empty line
+            if(line.length < 1) continue;
+            
+            // Comment line
+            if(line[0] == ';')  continue;
+            
+            // Section header
+            if(line.length >= 3 && line[0] == '[' && line[$-1] == ']')
             {
-                inQuote = !inQuote;
-            }
-            else if(state == State.Comment)
-            {
-                if(c == '\n')
+                section = &this;
+                char[] name = line[1..$-1];
+                string parent;
+                
+                int pos = name.countUntil(":");
+                if(pos > -1)
                 {
-                    state = State.Key;
+                    parent = name[pos+1..$].strip().idup;
+                    name = name[0..pos].strip();
                 }
-                else
+                
+                if(name.countUntil(".") > -1)
                 {
-                    continue;
-                }
-            }
-            else if(isComment(c))
-            {
-                state = State.Comment;
-            }
-            else if(isVariableLookup(c))
-            {
-                if(inLookup)
-                {
-                    if(lookupStart != -1)
+                    auto names = name.split(".");
+                    foreach(part; names)
                     {
-                        string name = buf[lookupStart.. offset];
-                        buf.replaceInPlace(lookupStart, offset, section.getKey(name).value);
-                        lookupStart = -1;
+                        IniSection sect;
+                        
+                        if(section.hasSection(part.idup)) {
+                            sect = section.getSection(part.idup);
+                        } else {
+                            sect = IniSection(part.idup, section);
+                            section.addSection(sect);
+                        }
+                        
+                        section = (&section.getSection(part.idup));
                     }
                 }
                 else
                 {
-                    inLookup = true;
-                    lookupStart = offset;
-                }
-            }
-            else if(isSectionOpen(c))
-            {
-                state = State.Section;
-                section = &ini;
-            }
-            else if(isSectionClose(c))
-            {
-                sectionName = buf.strip();
-                string parentName;
-                
-                if(sectionInheritChar != 0)
-                {
-                    string[] names = buf.split((&sectionInheritChar)[0..1]);
-                    if(names.length > 0)
-                    {
-                        sectionName = names[0].strip();
-                    }
+                    IniSection sect;
                     
-                    if(names.length > 1)
-                    {
-                        parentName = names[1].strip();
+                    if(section.hasSection(name.idup)) {
+                        sect = section.getSection(name.idup);
+                    } else {
+                        sect = IniSection(name.idup, section);
+                        section.addSection(sect);
                     }
+                        
+                    section = (&this.getSection(name.idup));
                 }
                 
-                if(sectionDelimeter != char.init)
+                if(parent.length > 1)
                 {
-                    auto parts = sectionName.split((&sectionDelimeter)[0..1]);
-                    
-                    
-                    foreach(part; parts)
-                    {
-                        section.addSection(IniSection(part));
-                        section = &(section.getSection(part));
-                    }
+                    if(parent[0] == '.')
+                        section.inherit(this.getSectionEx(parent[1..$]));
+                    else 
+                        section.inherit(section.getParent().getSectionEx(parent));
                 }
-                else
-                {
-                    section.addSection(IniSection(sectionName));
-                    section = &(section.getSection(sectionName));
-                }
-                
-                if(sectionInheritChar != 0 && parentName != "")
-                {
-                    section.inherit(ini.getSection(parentName, sectionDelimeter));
-                }
-                
-                buf = string.init;
-                offset = 0;
-                state = State.Key;
-            }
-            else if(isDelimeter(c))
-            {
-                tmp.name = buf.strip;
-                buf = string.init;
-                offset = 0;
-                state = State.Value;
-            }
-            else if(isValueEnd(c))
-            {
-                tmp.value = buf.strip();
-                buf = string.init;
-                state = State.Key;
-                
-                section.addKey(tmp);
-                resetKey(tmp);
-                offset = 0;
-            }
-            else
-            {
-                addStripedChar(c);
+                continue;
             }
             
-            prev = c;
+            // Assignement
+            auto parts = split(line, "=", 2);
+            if(parts.length > 1)
+            {
+                auto val = parts[1].strip();
+                if(val.length > 2 && val[0] == '"' && val[$-1] == '"') val = val[1..$-1];
+                section.setKey(parts[0].strip().idup, val.idup);
+                continue;
+            }
+            
+            throw new IniException("Syntax error at line "~to!string(i));
         }
         
-        tmp.value = buf;        
-        section.addKey(tmp);
-        
-        return ini;
+        if(doLookups == true)
+           parseLookups();
     }
     
     /**
-     * Adds character to buffer. If character is white space
-     * 
-     * Params:
-     *  c   =   Character to add to buffer
+     * Parses lookups
      */
-    protected void addStripedChar(char c)
+    public void parseLookups()
     {
-        if(inQuote)
+        foreach(name, ref value; _keys)
         {
-            buf ~= c;
-        }
-        else
-        {
-            if( c != '\n' && c != '\r' )
+            int start = -1;
+            char[] buf;
+            
+            foreach(i, c; value)
             {
-                buf ~= c;
+                if(c == '%')
+                {
+                    if(start != -1)
+                    {
+                        IniSection sect;
+                        string newValue;
+                        char[][] parts;
+                        
+                        if(buf[0] == '.')
+                        {
+                            parts = buf[1..$].split(".");
+                            sect = this.root;
+                        }
+                        else
+                        {
+                            parts = buf.split(".");
+                            sect = this;
+                        }
+                        
+                        newValue = sect.getSectionEx(parts[0..$-1].join(".").idup)
+                                .getKey(parts[$-1].idup);
+                        
+                        value.replaceInPlace(start, i+1, newValue);
+                        start = -1;
+                        buf = [];
+                    }
+                    else {
+                        start = i;
+                    }
+                }
+                else if(start != -1) {
+                    buf ~= c;
+                }
             }
         }
         
-        offset++;
+        foreach(child; _sections)
+        {
+            child.parseLookups();
+        }
+    }
+    
+    /**
+     * Returns section by name in inheriting(names connected by dot)
+     *
+     * Params:
+     *  name = Section name
+     *
+     * Returns:
+     *  Section
+     */
+    public IniSection getSectionEx(string name)
+    {
+        IniSection* root = &this;
+        auto parts = name.split(".");
+        
+        foreach(part; parts)
+        {
+            root = (&root.getSection(part));
+        }
+        
+        return *root;
+    }
+    
+    /**
+     * Inherits keys from section
+     *
+     * Params:
+     *  Section to inherit
+     */
+    public void inherit(IniSection sect)
+    {
+        this._keys = sect.keys().dup;
+    }
+    
+    /**
+     * Splits string by delimeter with limit
+     *
+     * Params:
+     *  txt     =   Text to split
+     *  delim   =   Delimeter
+     *  limit   =   Limit of splits 
+     *
+     * Returns:
+     *  Splitted string
+     */
+    protected T[] split(T, S)(T txt, S delim, int limit)
+        if(isSomeString!(T) && isSomeString!(S))
+    {
+        T[] parts;
+        int last, len = delim.length, cnt;
+    
+        for(int i = 0; i <= txt.length; i++)
+        {
+            if(cnt >= limit)
+                break;
+    
+            if(txt[i .. min(i + len, txt.length)] == delim)
+            {
+                parts ~= txt[last .. i];
+                last = min(i + 1, txt.length);
+                cnt++;
+            }
+        }
+    
+        parts ~= txt[last .. txt.length];       
+    
+        return parts;
+    }
+    
+    /**
+     * Parses Ini file
+     *
+     * Params:
+     *  filename = Path to ini file
+     *
+     * Returns:
+     *  IniSection root
+     */
+    static Ini Parse(string filename)
+    {
+        Ini i;
+        i.parse(filename);
+        return i;
     }
 }
 
-debug
-{
-    import std.stdio;
-    void main()
-    {
-         // Hard code the contents
-         string c = "[def]
-    name1=value1
-    name2=value2
+/// ditto
+alias IniSection Ini;
 
-   [foo : def]
-   name1=Name1 from foo. Lookup for def.name2:%name1%";
-    
-        // create parser instance
-        auto iniParser = new IniParser();
-        
-        // parse
-        auto ini = iniParser.parse(c);
-    
-        // write foo.name1 value
-        writeln(ini.getSection("foo")["name1"]);
+///
+class IniException : Exception
+{
+    this(string msg)
+    {
+        super(msg);
     }
 }

@@ -2,8 +2,8 @@
 
 ## What's that
 
-Dini is a library written in [D Programming Language](http://www.d-programming-language.org/)
-that allows you to parse INI (or similar) configuration files easily.
+Dini is a library written in [D Programming Language](http://www.dlang.org/)
+that allows you to parse INI configuration files easily.
 
 ## Features
 
@@ -11,10 +11,6 @@ that allows you to parse INI (or similar) configuration files easily.
      
      Documentation and examples helps you understand library. It's also very nice to use :).
 
- - __Customisable__
-     
-     You can define your own INI delimeters, comment characters and others.
-    
  - __Well documented__
      
      The code is well documented, allowing you to understand it easier.
@@ -47,24 +43,63 @@ Now, lets try to parse it, we can do it with using code similar to:
 
 ```D
 import std.stdio;
+import dini;
+
 void main()
 {
-     // Hard code the contents
-     string c = "[def]
-name1=value1
-name2=value2
-
-[foo : def]
-name1=Name1 from foo. Lookup for def.name2: %name2%";
-
-    // create parser instance
-    auto iniParser = new IniParser();
+    // Parse file
+    auto ini = Ini.Parse("path/to/file.conf");
     
-    // parse
-    auto ini = iniParser.parse(c);
-    
-    // write foo.name1 value
-    writeln(ini.getSection("foo")["name1"].value);
+    // Print foo.name1 value
+    writeln(ini["foo"].getKey("name1"));
 }
 ```
 
+You can also set INI variables, before parsing:
+
+```D
+import std.stdio, std.path;
+import dini;
+
+void main()
+{
+    // Create ini struct instance
+    Ini ini;
+    
+    // Set key value
+    ini.setKey("currentdir", getcwd());
+    
+    // Now, you can use currentdir in ini file
+    ini.parse();
+    
+    // Print foo.name1 value
+    writeln(ini["foo"].getKey("currentdir"));
+}
+```
+
+### Global Inheriting
+
+If you would like to inherit sections that are in another one, you can use  `.` at the beggining:
+
+```ini
+[a]
+[a.b]
+
+[b]
+; Note the dot at beggining
+[b.c : .a.b]
+
+
+### Global lookups
+
+The same goes for variable lookups:
+
+```ini
+[a]
+[a.b]
+var=test
+
+[b]
+[b.c]
+var=%.a.b.var%
+```

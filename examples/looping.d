@@ -1,23 +1,17 @@
-import std.stdio : writeln;
-import std.file : readText;
-import DIni;
+import std.stdio : writefln;
+import dini;
 
 void main()
-{
-    // Create parser instance
-    scope iniParser = new IniParser();
-    
-    // Enable section nestedness and set delimeter to 
-    iniParser.sectionDelimeter = ".";
-    
+{   
     // Parse and get result
-    auto ini = iniParser.parse(readText("example.conf"));
+    auto ini = Ini.Parse("example.conf");
     
-    foreach(IniSection section; ini)
+    // Loop root section
+    foreach(IniSection section; ini.sections)
     {
         writefln("\n-- Section: %s", section.name);
         
-        foreach(IniKey key; section)
-            writefln("%s: %s", key.name, key.value);
+        foreach(key, value; section.keys)
+            writefln("%s: %s", key, value);
     }
 }
