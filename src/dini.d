@@ -22,7 +22,7 @@ import std.stdio;
  * Example:
  * ---
  * Ini ini = Ini.Parse("path/to/your.conf");
- * ini.getKey("a");
+ * string value = ini.getKey("a");
  * ---
  */
 struct IniSection

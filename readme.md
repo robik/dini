@@ -55,7 +55,7 @@ void main()
 }
 ```
 
-You can also set INI variables, before parsing:
+You can also set INI variables before parsing:
 
 ```D
 import std.stdio, std.path;
@@ -76,11 +76,11 @@ void main()
     writeln(ini["foo"].getKey("currentdir"));
 }
 ```
-
+This allows for using `%currentdir%` in configuration file now.
 
 ### Global Inheriting
 
-If you would like to inherit sections that are in another one, you can use  `.` at the beggining:
+If you would like to inherit sections that are in another one, you can use  `.` at the beggining to start from global scope:
 
 ```ini
 [a]
