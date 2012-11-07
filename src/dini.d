@@ -1,9 +1,8 @@
-
 /**
  * This file is part of Dini library
  * 
  * Copyright: Robert Pasiński
- * License: MIT License
+ * License: Boost License
  */
 module dini;
 
