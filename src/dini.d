@@ -318,7 +318,7 @@ struct IniSection
                 char[] name = line[1..$-1];
                 string parent;
                 
-                int pos = name.countUntil(":");
+                ptrdiff_t pos = name.countUntil(":");
                 if(pos > -1)
                 {
                     parent = name[pos+1..$].strip().idup;
@@ -390,7 +390,7 @@ struct IniSection
     {
         foreach(name, ref value; _keys)
         {
-            int start = -1;
+            ptrdiff_t start = -1;
             char[] buf;
             
             foreach(i, c; value)
@@ -486,7 +486,7 @@ struct IniSection
     {
         limit -= 1;
         T[] parts;
-        int last, len = delim.length, cnt;
+        ptrdiff_t last, len = delim.length, cnt;
         
         for(int i = 0; i <= txt.length; i++)
         {
