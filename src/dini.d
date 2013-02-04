@@ -115,6 +115,11 @@ struct IniSection
         return _keys[name];
     }
     
+    
+    /// ditto
+    alias getKey opCall;
+    
+    
     /**
      * Removes key
      *
