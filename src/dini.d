@@ -247,7 +247,7 @@ struct IniSection
         
         while(s.getParent() != null)
             s = *(s.getParent());
-            
+        
         return s;
     }
     
@@ -352,7 +352,7 @@ struct IniSection
                         sect = IniSection(name.idup, section);
                         section.addSection(sect);
                     }
-                        
+                    
                     section = (&this.getSection(name.idup));
                 }
                 
@@ -380,7 +380,7 @@ struct IniSection
         }
         
         if(doLookups == true)
-           parseLookups();
+            parseLookups();
     }
     
     /**
@@ -415,7 +415,7 @@ struct IniSection
                         }
                         
                         newValue = sect.getSectionEx(parts[0..$-1].join(".").idup)
-                                .getKey(parts[$-1].idup);
+                            .getKey(parts[$-1].idup);
                         
                         value.replaceInPlace(start, i+1, newValue);
                         start = -1;
@@ -482,16 +482,17 @@ struct IniSection
      *  Splitted string
      */
     protected T[] split(T, S)(T txt, S delim, int limit)
-        if(isSomeString!(T) && isSomeString!(S))
+    if(isSomeString!(T) && isSomeString!(S))
     {
+        limit -= 1;
         T[] parts;
         int last, len = delim.length, cnt;
-    
+        
         for(int i = 0; i <= txt.length; i++)
         {
             if(cnt >= limit)
                 break;
-    
+            
             if(txt[i .. min(i + len, txt.length)] == delim)
             {
                 parts ~= txt[last .. i];
@@ -499,9 +500,9 @@ struct IniSection
                 cnt++;
             }
         }
-    
+        
         parts ~= txt[last .. txt.length];       
-    
+        
         return parts;
     }
     
