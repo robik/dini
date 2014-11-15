@@ -1,0 +1,8 @@
+{
+	"name": "dini",
+	"description": "Ini like format parser written in D.",
+	"license": "Boost Livense",
+	"targetType": "library",
+	"sourcePaths": ["src"]
+}
+
