@@ -89,7 +89,7 @@ struct IniSection
      * Returns:
      *  True if exists, false otherwise 
      */
-    public bool hasKey(string name)
+    public bool hasKey(string name) @safe nothrow @nogc
     {
         return (name in _keys) !is null;
     }
@@ -119,6 +119,21 @@ struct IniSection
     /// ditto
     alias getKey opCall;
     
+    /**
+     * Gets key value or defaultValue if key does not exist
+     *
+     * Params:
+     *  name = Key name
+     *  defaultValue = Default value
+     *
+     * Returns:
+     *  Key value or defaultValue
+     *
+     */
+    public string getKey(string name, string defaultValue) @safe nothrow
+    {
+        return hasKey(name) ? _keys[name] : defaultValue;
+    }
     
     /**
      * Removes key
