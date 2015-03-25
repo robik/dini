@@ -9,7 +9,7 @@ module dini;
 import std.stream : BufferedFile;
 import std.string : strip;
 import std.traits : isSomeString;
-import std.array  : split, indexOf, replaceInPlace, join;
+import std.array  : split, replaceInPlace, join;
 import std.algorithm : min, max, countUntil;
 import std.conv   : to;
 
