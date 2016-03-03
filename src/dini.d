@@ -6,7 +6,7 @@
  */
 module dini;
 
-import std.stream : BufferedFile;
+import std.stdio : File;
 import std.string : strip;
 import std.traits : isSomeString;
 import std.array  : split, replaceInPlace, join;
@@ -311,12 +311,13 @@ struct IniSection
      */
     public void parse(string filename, bool doLookups = true)
     {
-        BufferedFile file = new BufferedFile(filename);
+        auto file = new File(filename);
         scope(exit) file.close;
         
         IniSection* section = &this;
-        
-        foreach(i, char[] line; file)
+
+        import std.range : enumerate;
+        foreach(i, char[] line; file.byLine.enumerate(1))
         {
             line = strip(line);
             
