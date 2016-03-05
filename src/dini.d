@@ -6,9 +6,10 @@
  */
 module dini;
 
-import std.stream : BufferedFile;
-import std.string : strip;
+import std.stdio : File;
+import std.string : strip, splitLines;
 import std.traits : isSomeString;
+import std.range : ElementType;
 import std.array  : split, replaceInPlace, join;
 import std.algorithm : min, max, countUntil;
 import std.conv   : to;
@@ -311,91 +312,113 @@ struct IniSection
      */
     public void parse(string filename, bool doLookups = true)
     {
-        BufferedFile file = new BufferedFile(filename);
+        auto file = new File(filename);
         scope(exit) file.close;
-        
+
+        parse(file, doLookups);
+    }
+
+    public void parse(File* file, bool doLookups = true)
+    {
         IniSection* section = &this;
-        
-        foreach(i, char[] line; file)
+
+        import std.range : enumerate;
+        foreach(i, char[] line; file.byLine.enumerate(1))
         {
-            line = strip(line);
-            
-            // Empty line
-            if(line.length < 1) continue;
-            
-            // Comment line
-            if(line[0] == ';')  continue;
-            
-            // Section header
-            if(line.length >= 3 && line[0] == '[' && line[$-1] == ']')
-            {
-                section = &this;
-                char[] name = line[1..$-1];
-                string parent;
-                
-                ptrdiff_t pos = name.countUntil(":");
-                if(pos > -1)
-                {
-                    parent = name[pos+1..$].strip().idup;
-                    name = name[0..pos].strip();
-                }
-                
-                if(name.countUntil(".") > -1)
-                {
-                    auto names = name.split(".");
-                    foreach(part; names)
-                    {
-                        IniSection sect;
-                        
-                        if(section.hasSection(part.idup)) {
-                            sect = section.getSection(part.idup);
-                        } else {
-                            sect = IniSection(part.idup, section);
-                            section.addSection(sect);
-                        }
-                        
-                        section = (&section.getSection(part.idup));
-                    }
-                }
-                else
-                {
-                    IniSection sect;
-                    
-                    if(section.hasSection(name.idup)) {
-                        sect = section.getSection(name.idup);
-                    } else {
-                        sect = IniSection(name.idup, section);
-                        section.addSection(sect);
-                    }
-                    
-                    section = (&this.getSection(name.idup));
-                }
-                
-                if(parent.length > 1)
-                {
-                    if(parent[0] == '.')
-                        section.inherit(this.getSectionEx(parent[1..$]));
-                    else 
-                        section.inherit(section.getParent().getSectionEx(parent));
-                }
-                continue;
-            }
-            
-            // Assignement
-            auto parts = split(line, "=", 2);
-            if(parts.length > 1)
-            {
-                auto val = parts[1].strip();
-                if(val.length > 2 && val[0] == '"' && val[$-1] == '"') val = val[1..$-1];
-                section.setKey(parts[0].strip().idup, val.idup);
-                continue;
-            }
-            
-            throw new IniException("Syntax error at line "~to!string(i));
+            parse(line, i, section);
         }
         
         if(doLookups == true)
             parseLookups();
+    }
+
+    public void parseString(string data, bool doLookups = true) 
+    {
+        IniSection* section = &this;
+
+        foreach(i, line; data.splitLines)
+            parse(line, i, section);
+
+        if(doLookups == true)
+            parseLookups();
+    }
+
+    private void parse(const(char)[] line, size_t lineCount, ref IniSection* section)
+    {
+        line = strip(line);
+
+        // Empty line
+        if(line.length < 1) return;
+
+        // Comment line
+        if(line[0] == ';')  return;
+
+        // Section header
+        if(line.length >= 3 && line[0] == '[' && line[$-1] == ']')
+        {
+            section = &this;
+            const(char)[] name = line[1..$-1];
+            string parent;
+
+            ptrdiff_t pos = name.countUntil(":");
+            if(pos > -1)
+            {
+                parent = name[pos+1..$].strip().idup;
+                name = name[0..pos].strip();
+            }
+
+            if(name.countUntil(".") > -1)
+            {
+                auto names = name.split(".");
+                foreach(part; names)
+                {
+                    IniSection sect;
+
+                    if(section.hasSection(part.idup)) {
+                        sect = section.getSection(part.idup);
+                    } else {
+                        sect = IniSection(part.idup, section);
+                        section.addSection(sect);
+                    }
+
+                    section = (&section.getSection(part.idup));
+                }
+            }
+            else
+            {
+                IniSection sect;
+
+                if(section.hasSection(name.idup)) {
+                    sect = section.getSection(name.idup);
+                } else {
+                    sect = IniSection(name.idup, section);
+                    section.addSection(sect);
+                }
+
+                section = (&this.getSection(name.idup));
+            }
+
+            if(parent.length > 1)
+            {
+                if(parent[0] == '.')
+                    section.inherit(this.getSectionEx(parent[1..$]));
+                else 
+                    section.inherit(section.getParent().getSectionEx(parent));
+            }
+            return;
+        }
+
+        // Assignement
+        auto parts = split(line, "=", 2);
+        if(parts.length > 1)
+        {
+            auto val = parts[1].strip();
+            if(val.length > 2 && val[0] == '"' && val[$-1] == '"') val = val[1..$-1];
+            section.setKey(parts[0].strip().idup, val.idup);
+            return;
+        }
+
+        throw new IniException("Syntax error at line "~to!string(lineCount));
     }
     
     /**
@@ -536,6 +559,48 @@ struct IniSection
         i.parse(filename);
         return i;
     }
+
+    static Ini ParseString(string data)
+    {
+        Ini i;
+        i.parseString(data);
+        return i;
+    }
+} unittest {
+	auto data = q"EOF
+[def]
+name1=value1
+name2=value2
+
+[foo : def]
+name1=Name1 from foo. Lookup for def.name2: %name2%
+EOF";
+
+    // Parse file
+    auto ini = Ini.ParseString(data);
+
+    assert(ini["foo"].getKey("name1")
+	  == "Name1 from foo. Lookup for def.name2: value2");
+}
+
+unittest {
+	auto data = q"EOF
+[section]
+name=%value%
+EOF";
+
+	// Create ini struct instance
+	Ini ini;
+	Ini iniSec = IniSection("section");
+	ini.addSection(iniSec);
+
+	// Set key value
+	ini["section"].setKey("value", "verify");
+
+	// Now, you can use value in ini file
+	ini.parseString(data);
+
+	assert(ini["section"].getKey("name") == "verify");
 }
 
 /// ditto
