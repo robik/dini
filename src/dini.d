@@ -352,6 +352,7 @@ struct IniSection
 
         // Comment line
         if(line[0] == ';')  return;
+        if(line[0] == '#')  return;
 
         // Section header
         if(line.length >= 3 && line[0] == '[' && line[$-1] == ']')
