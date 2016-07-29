@@ -633,6 +633,27 @@ EOF";
 /// ditto
 alias IniSection Ini;
 
+Struct siphon(Struct)(Ini ini) {
+	import std.traits;
+	Struct ans;
+	if(ini.hasSection(Struct.stringof))
+		foreach(ti, Name; FieldNameTuple!(Struct))
+		{
+			alias ToType = typeof(ans.tupleof[ti]);
+			if(ini[Struct.stringof].hasKey(Name))
+				ans.tupleof[ti] = to!ToType(ini[Struct.stringof].getKey(Name));
+		}
+	return ans;
+} unittest {
+	struct Section {
+		int var;
+	}
+
+	auto ini = Ini.ParseString("[Section]\nvar=3");
+	auto m = ini.siphon!Section;
+	assert(m.var == 3);
+}
+
 ///
 class IniException : Exception
 {
