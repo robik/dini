@@ -352,6 +352,7 @@ struct IniSection
 
         // Comment line
         if(line[0] == ';')  return;
+        if(line[0] == '#')  return;
 
         // Section header
         if(line.length >= 3 && line[0] == '[' && line[$-1] == ']')
@@ -542,6 +543,32 @@ struct IniSection
         parts ~= txt[last .. txt.length];       
         
         return parts;
+    }
+
+    public void save(string filename)
+    {
+        import std.file;
+
+        if (exists(filename))
+        {
+            remove(filename);
+        }
+
+        File file = File(filename, "w");
+
+        foreach (section; _sections)
+        {
+            file.writeln("[" ~ section.name() ~ "]");
+
+            string[string] propertiesInSection = section.keys();
+            foreach (key; propertiesInSection.keys) {
+                file.writeln(key ~ " = " ~ propertiesInSection[key]);
+            }
+
+            file.writeln();
+        }
+
+        file.close();
     }
     
     /**
