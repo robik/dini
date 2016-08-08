@@ -2,7 +2,6 @@
 	"name": "dini",
 	"description": "INI-like format parser written in D.",
 	"license": "Boost License",
-	"targetType": "library",
-	"sourcePaths": ["src"]
+	"sourcePaths": ["source"]
 }
 

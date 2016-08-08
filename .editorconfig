@@ -1,0 +1,5 @@
+root = true
+
+[.d]
+indent_size = 4
+indent_type = spaces

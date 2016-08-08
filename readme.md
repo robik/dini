@@ -1,9 +1,11 @@
-# Dini
+# `dini`
 
-## What's that
+[![Version](https://img.shields.io/dub/v/dini.svg)](https://code.dlang.org/packages/dini)
+[![Downloads](https://img.shields.io/dub/dt/dini.svg)](https://code.dlang.org/packages/dini)
+![Maintained](https://img.shields.io/maintenance/yes/2016.svg)
 
-Dini is a library written in [D Programming Language](http://www.dlang.org/)
-that allows you to parse INI configuration files easily.
+`dini` is a library written in [D Programming Language](http://www.dlang.org/)
+that allows you to read and write INI configuration files with ease.
 
 ## Features
 
@@ -13,7 +15,7 @@ that allows you to parse INI configuration files easily.
 
  - __Well documented__
      
-     The code is well documented, allowing you to understand it easier.
+     The code is well documented. If you find something that isn't, be sure to open issue about it.
  
  - __Variable lookups__
      
@@ -22,10 +24,48 @@ that allows you to parse INI configuration files easily.
  - __Section inheriting__   
     
     Sections can inherit values from other sections
+    
+ - __Configurable__
+ 
+    *Since version 2*
+ 
+    You can define custom quotes, comments and use custom type to store values (*reader only*).
+    
+    Also, if you want to create custom data from INI, you can use `INIReader` to construct one.
 
 
-# Learning Dini
-## Simple example
+> __NOTE__: Current development version - `2.0.0` is backwards API compatible, if you have any compatibility issues, __please__ report them.
+
+
+# Quick start
+
+## Installation
+
+__Stable version__
+
+```js
+{
+    ...
+    "dependencies": {
+        "dini": "~> 1.0.1"
+    }
+    ...
+}
+```
+
+__Latest version__
+```js
+{
+    ...
+    "dependencies": {
+        "dini": "~> 2.0.0-rc"
+    }
+    ...
+}
+```
+
+
+## Usage
 
 Let's check how it works in real life. In the examples, we'll use following configuration file:
 
@@ -78,7 +118,7 @@ void main()
 ```
 This allows for using `%currentdir%` in configuration file now.
 
-### Global Inheriting
+#### Global Inheriting
 
 If you would like to inherit sections that are in another one, you can use  `.` at the beggining to start from global scope:
 
@@ -92,7 +132,7 @@ If you would like to inherit sections that are in another one, you can use  `.` 
 ```
 
 
-### Global lookups
+#### Global lookups
 
 The same goes for variable lookups:
 
