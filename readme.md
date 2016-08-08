@@ -1,5 +1,6 @@
 # `dini`
 
+![BuildStatus](https://travis-ci.org/robik/DIni.svg)
 [![Version](https://img.shields.io/dub/v/dini.svg)](https://code.dlang.org/packages/dini)
 [![Downloads](https://img.shields.io/dub/dt/dini.svg)](https://code.dlang.org/packages/dini)
 ![Maintained](https://img.shields.io/maintenance/yes/2016.svg)
