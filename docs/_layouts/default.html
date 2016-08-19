@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{page.title}} - {{ site.title }}</title>
+    <link rel="stylesheet" href="{{ "/css/main.css" | prepend: site.baseurl }}" />
+    <link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/default.min.css">
+    <script src="{{ "/static/highlight.js" | prepend: site.baseurl }}"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+
+{% include header.html %}
+{% include nav.html %}
+
+<div class="content">
+    <div class="container">
+        {{content}}
+
+        <div class="edit-page">
+            <a href="{{site.github_path}}{{page.path}}">Edit this page</a>
+        </div>
+    </div>
+</div>
+
+{% include footer.html %}
+
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+</body>
+</html>

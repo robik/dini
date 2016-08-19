@@ -1,0 +1,12 @@
+
+<nav>
+    <div class="container">
+        {% assign nav-pages = site.pages | sort:'order' %}
+        {% for nav-page in nav-pages %}
+            {% if nav-page.excluded == true %} {% continue %} {% endif %}
+                <a {% if nav-page.url == page.url %}class="active"{% endif %}
+                   href="{{ nav-page.url | prepend: site.baseurl}}">{{nav-page.title | downcase }}</a>
+            {% if forloop.last == false %}<span class="delim">/</span> {% endif %}
+        {% endfor %}
+    </div>
+</nav>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home - dini</title>
+    <link rel="stylesheet" href="/dini/css/main.css" />
+    <link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/default.min.css">
+    <script src="/dini/static/highlight.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="col fill">
+            <h1>dini
+                <small>2.0.0-rc</small>
+            </h1>
+        </div>
+
+        <div class="col center">
+            <a class="github-button" href="https://github.com/robik/dini" data-count-href="/robik/dini/stargazers"
+               data-count-api="/repos/robik/dini#stargazers_count" data-count-aria-label="# stargazers on GitHub"
+               aria-label="Star robik/dini on GitHub">Star</a>
+        </div>
+    </div>
+</header>
+
+<nav>
+    <div class="container">
+        
+        
+             
+             
+            
+                <a class="active"
+                   href="/dini/">home</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/install/">installation</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/compatibility/">format compatibility</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/usage/">usage</a>
+            
+        
+    </div>
+</nav>
+
+<div class="content">
+    <div class="container">
+        <p><code class="highlighter-rouge">dini</code> is a library written in <a href="http://www.dlang.org/">D Programming Language</a>
+that allows you to read and write <code class="highlighter-rouge">INI</code> files.</p>
+
+<h3 id="why-ini">Why <code class="highlighter-rouge">ini</code>?</h3>
+
+<p>INI is widely popular, lightweight key-value text configuration format. While being very simple to learn and edit
+manually it is also very fast to parse.</p>
+
+<p>In contrast to <code class="highlighter-rouge">JSON</code>, which is also commonly used for configuration purposes, <code class="highlighter-rouge">ini</code> allows to embed comments, while <code class="highlighter-rouge">JSON</code>
+does not. And as for <code class="highlighter-rouge">YAML</code>, <code class="highlighter-rouge">ini</code> is much more lightweight and simpler. It looks roughly like this:</p>
+
+<figure class="highlight"><pre><code class="language-ini" data-lang="ini"><span class="nn">[section name]</span>
+<span class="py">key</span> <span class="p">=</span> <span class="s">value</span>
+
+<span class="c">; comments are allowed on dedicated lines
+</span><span class="err">another</span> <span class="py">key</span> <span class="p">=</span> <span class="s">"another value"</span>
+
+<span class="nn">[section 2]</span>
+<span class="py">key</span> <span class="p">=</span> <span class="s">section 2 value</span></code></pre></figure>
+
+<h3 id="features">Features</h3>
+
+<ul>
+  <li>
+    <p><strong>Easy to use</strong></p>
+
+    <p>API is fairy simple and straightforward and allows you to lower-level to get more control.</p>
+  </li>
+  <li>
+    <p><strong>Rich support</strong></p>
+
+    <p><code class="highlighter-rouge">dini</code> supports features such as section inheritance or variable lookups.</p>
+  </li>
+  <li>
+    <p><strong>Configurable</strong> (<code class="highlighter-rouge">&gt;= 2.0.0</code>)</p>
+
+    <p>Since <code class="highlighter-rouge">v2.0</code> you can define custom quotes, comments and use custom type to store values.</p>
+
+    <p>Also, if you don’t like current model tree, you can write your own eaisly using <code class="highlighter-rouge">INIReader</code>.</p>
+  </li>
+</ul>
+
+
+        <div class="edit-page">
+            <a href="https://github.com/robik/dini/master/blob/docs/index.md">Edit this page</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="container">
+        <a href="https://github.com/robik/dini">GitHub Repository</a>
+        <a href="https://github.com/robik/dini/issues/new">Report an issue</a>
+        <a href="https://code.dlang.org/packages/dini">DUB package</a>
+    </div>
+</footer>
+
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+</body>
+</html>

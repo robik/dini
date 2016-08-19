@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Format compatibility - dini</title>
+    <link rel="stylesheet" href="/dini/css/main.css" />
+    <link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/default.min.css">
+    <script src="/dini/static/highlight.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="col fill">
+            <h1>dini
+                <small>2.0.0-rc</small>
+            </h1>
+        </div>
+
+        <div class="col center">
+            <a class="github-button" href="https://github.com/robik/dini" data-count-href="/robik/dini/stargazers"
+               data-count-api="/repos/robik/dini#stargazers_count" data-count-aria-label="# stargazers on GitHub"
+               aria-label="Star robik/dini on GitHub">Star</a>
+        </div>
+    </div>
+</header>
+
+<nav>
+    <div class="container">
+        
+        
+             
+             
+            
+                <a 
+                   href="/dini/">home</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/install/">installation</a>
+            <span class="delim">/</span> 
+        
+            
+                <a class="active"
+                   href="/dini/compatibility/">format compatibility</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/usage/">usage</a>
+            
+        
+    </div>
+</nav>
+
+<div class="content">
+    <div class="container">
+        <p><em>This page describes various INI format similarities and differences and how <code class="highlighter-rouge">dini</code> handles them.</em></p>
+
+<p>Due to lack of any official specification many variations have been created.
+Unless you have to, you should write ini that is most compatible (greatest common divisor).</p>
+
+<h3 id="similarities">Similarities</h3>
+
+<p>Elements that are most commonly used and are free to use:</p>
+
+<ul>
+  <li>
+    <p>Sections denoted with square brackets <code class="highlighter-rouge">[section]</code></p>
+
+    <blockquote>
+      <p><strong><code class="highlighter-rouge">dini</code></strong>: Section names are whitespace trimmed</p>
+    </blockquote>
+  </li>
+  <li>
+    <p>Equals as key delimeter (<code class="highlighter-rouge">=</code>): <code class="highlighter-rouge">key = value</code></p>
+
+    <blockquote>
+      <p><strong><code class="highlighter-rouge">dini</code></strong>: Key names are trimmed and values are left-trimmed</p>
+    </blockquote>
+  </li>
+  <li>
+    <p>Comments are denoted with semicolon (<code class="highlighter-rouge">;</code>) and are allowed only on dedicated lines:</p>
+
+    <pre><code class="language-INI">; comment line
+key = value ; this is part of value
+</code></pre>
+  </li>
+</ul>
+
+<h3 id="differences">Differences</h3>
+
+<p>Here’s a list of things that vary between parsers:</p>
+
+<ul>
+  <li>
+    <p>Colon as key delimeter</p>
+
+    <p>Currently not supported. This one is pretty rare and such configuration files should be called <code class="highlighter-rouge">ini</code> anymore.</p>
+  </li>
+  <li>
+    <p>Hashes for comments</p>
+
+    <p>Supported, but can be disabled. This one is pretty common and not so intrusive.</p>
+  </li>
+  <li>
+    <p>Multiline strings</p>
+
+    <p>Supported, but can be disabled. Allows you to define values as such:</p>
+
+    <pre><code class="language-INI">key="""
+    multiline value
+"""
+</code></pre>
+  </li>
+  <li>
+    <p>Quoted keys</p>
+
+    <p>Supported. Quoted keys are used by Windows Registry export.</p>
+  </li>
+  <li>
+    <p>Escape sequences</p>
+
+    <p>Supported, but can be disabled.</p>
+  </li>
+  <li>
+    <p>Escaped line feeds</p>
+
+    <p>Supported. You can escape new lines in values to ignore them. For example:</p>
+
+    <pre><code class="language-INI"># the value below does not contain newline!
+name=this is a very \
+ long value
+</code></pre>
+  </li>
+</ul>
+
+
+
+        <div class="edit-page">
+            <a href="https://github.com/robik/dini/master/blob/docs/pages/compatibility.md">Edit this page</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="container">
+        <a href="https://github.com/robik/dini">GitHub Repository</a>
+        <a href="https://github.com/robik/dini/issues/new">Report an issue</a>
+        <a href="https://code.dlang.org/packages/dini">DUB package</a>
+    </div>
+</footer>
+
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+</body>
+</html>

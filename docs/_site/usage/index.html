@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Usage - dini</title>
+    <link rel="stylesheet" href="/dini/css/main.css" />
+    <link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/default.min.css">
+    <script src="/dini/static/highlight.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="col fill">
+            <h1>dini
+                <small>2.0.0-rc</small>
+            </h1>
+        </div>
+
+        <div class="col center">
+            <a class="github-button" href="https://github.com/robik/dini" data-count-href="/robik/dini/stargazers"
+               data-count-api="/repos/robik/dini#stargazers_count" data-count-aria-label="# stargazers on GitHub"
+               aria-label="Star robik/dini on GitHub">Star</a>
+        </div>
+    </div>
+</header>
+
+<nav>
+    <div class="container">
+        
+        
+             
+             
+            
+                <a 
+                   href="/dini/">home</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/install/">installation</a>
+            <span class="delim">/</span> 
+        
+            
+                <a 
+                   href="/dini/compatibility/">format compatibility</a>
+            <span class="delim">/</span> 
+        
+            
+                <a class="active"
+                   href="/dini/usage/">usage</a>
+            
+        
+    </div>
+</nav>
+
+<div class="content">
+    <div class="container">
+        <p>Before we continue, let’s have a look at minimal example code:</p>
+
+<pre><code class="language-D">import std.stdio;
+import dini;
+
+void main()
+{
+    // Our configuration contents
+    string contents = `
+    [window]
+        width = 800
+        height = 600
+`;
+
+    // Parse configuration from `contents` variable
+    Ini config = Ini.ParseString(contents);
+    
+    // Or if you want to load configuration from file:
+    // Ini config = Ini.Parse("path/to/config.ini");
+    
+    writefln("Window size: %s %s", 
+        config["window"]("width"), 
+        config["window"]("height")
+    );
+}
+</code></pre>
+
+<p>First we parse INI data from string using <code class="highlighter-rouge">Ini.ParseString</code> static function. It returns
+parsed data as <code class="highlighter-rouge">Ini</code> instance, which is a convenience alias for <code class="highlighter-rouge">IniSection</code>.</p>
+
+<p>Returned object is an root section, which contains every element.
+Then we access sub-section <code class="highlighter-rouge">[window]</code> that contains our keys using <code class="highlighter-rouge">config["window"]</code>. 
+This returns instance of <code class="highlighter-rouge">IniSection</code>.</p>
+
+<p>Having our subsection we can access keys with <code class="highlighter-rouge">section("keyname")</code>. Returned values
+are strings and integers/booleans/floats must be parsed manually.</p>
+
+<blockquote>
+  <p><strong>Heads up</strong>: You should be really careful with repetetive parsing of values (such as loop) as it
+may hit performance dramatically.</p>
+</blockquote>
+
+<h3 id="error-handling">Error handling</h3>
+
+<p>In the code above we assumed that our configuration contains what we expected.
+If any section or key we accessed would not exist, <code class="highlighter-rouge">IniException</code> is thrown. 
+And uncaught would crash our example app.</p>
+
+<p>You can handle such errors threefold:</p>
+
+<ul>
+  <li>
+    <p>For keys you can use <code class="highlighter-rouge">getKey(name, defaultValue)</code>. 
+If requested key does not exist, default value will be returned.</p>
+
+    <pre><code class="language-D">writefln("Window size: %s %s", 
+    config["window"].getKey("width", "800"), 
+    config["window"].getKey("height", "600")
+);
+</code></pre>
+  </li>
+  <li>
+    <p>You can check for element existence with <code class="highlighter-rouge">hasKey</code>/<code class="highlighter-rouge">hasSection</code> and react accordingly.</p>
+  </li>
+  <li>
+    <p>You can wrap access in <code class="highlighter-rouge">try {} catch</code> block and exit gracefully.</p>
+
+    <pre><code class="language-D">// hint: bad configuration should be checked 
+// before any operation to improve UX
+try {
+    writefln("Window size: %s %s", 
+        config["window"]("width"), 
+        config["window"]("height")
+    );
+}
+catch (IniException e) {
+    stderr.writeln("Invalid configuration: ", e.message);
+}
+</code></pre>
+  </li>
+</ul>
+
+<h3 id="object-model-primer">Object model primer</h3>
+
+<p>Following is the list of most important methods in <code class="highlighter-rouge">IniSection</code>:</p>
+
+<dl>
+  <dt><code class="highlighter-rouge">section.root</code></dt>
+  <dd>Root section or <code class="highlighter-rouge">this</code> if none (returns <code class="highlighter-rouge">IniSection</code>)</dd>
+  <dt><code class="highlighter-rouge">section.name</code></dt>
+  <dd>Section name (returns <code class="highlighter-rouge">string</code>)</dd>
+  <dt><code class="highlighter-rouge">section.keys</code></dt>
+  <dd>Section keys (returns <code class="highlighter-rouge">string[string]</code>)</dd>
+  <dt><code class="highlighter-rouge">section.sections</code></dt>
+  <dd>Sub-sections (returns <code class="highlighter-rouge">IniSection[]</code>)</dd>
+  <dt><code class="highlighter-rouge">section.hasSection(string name)</code>  </dt>
+  <dt><code class="highlighter-rouge">section.hasKey(string name)</code>  </dt>
+  <dt><code class="highlighter-rouge">section.hasParent()</code></dt>
+  <dd>Checks whenever specified element exists (returns <code class="highlighter-rouge">bool</code>)</dd>
+  <dt><code class="highlighter-rouge">section.getSection(string name)</code>  </dt>
+  <dt><code class="highlighter-rouge">section.getKey(string name[, string defaultVal])</code></dt>
+  <dd>Section or key with specified name if found, <code class="highlighter-rouge">IniException</code> is thrown otherwise</dd>
+  <dd>Returns <code class="highlighter-rouge">IniSection</code>/<code class="highlighter-rouge">string</code></dd>
+  <dt><code class="highlighter-rouge">section.setKey(string name, string value)</code></dt>
+  <dd>Sets key value</dd>
+  <dt><code class="highlighter-rouge">section.removeSection(string name)</code>  </dt>
+  <dt><code class="highlighter-rouge">section.removeKey(string name)</code></dt>
+  <dd>Removes specified element if exists, noop otherwise.</dd>
+  <dt><code class="highlighter-rouge">section.getParent()</code></dt>
+  <dd>Returns section parent or <code class="highlighter-rouge">null</code> if none (returns <code class="highlighter-rouge">IniSection*</code>)</dd>
+</dl>
+
+<p>Few words about how data is kept: Keys are stored in hashmap, not allowing duplicate key entries.
+This results in key access being <code class="highlighter-rouge">O(1)</code>. Subsections are stored in dynamic array, thus
+section access is <code class="highlighter-rouge">O(n)</code>.</p>
+
+<h3 id="key-references">Key references</h3>
+
+<p>By default, when parsing <code class="highlighter-rouge">dini</code> will resolve all key references. They look like this:</p>
+
+<pre><code class="language-INI">[api]
+endpoint=http://test
+user_url=%endpoint%/users
+</code></pre>
+
+<p>After parsing, <code class="highlighter-rouge">api.user_url</code> will be resolved to <code class="highlighter-rouge">http://test/users</code>.
+This is cool, however may cause you headaches if you do not want this behaviour.</p>
+
+<p>To disable this features, pass <code class="highlighter-rouge">false</code> as second argument to <code class="highlighter-rouge">Parse</code>/<code class="highlighter-rouge">ParseString</code> functions.
+You can resolve references with <code class="highlighter-rouge">section.parseLookups()</code></p>
+
+<p>This also allows you to load a configuration file, assign values manually (e.g. <code class="highlighter-rouge">ENV</code> variables) and
+then resolve references:</p>
+
+<pre><code class="language-D">import std.stdio, std.path;
+import dini;
+
+void main()
+{
+    // Parse configuration
+    Ini ini = Ini.Parse("path/to/file", false);
+
+    // Set key value
+    ini.setKey("currentdir", getcwd());
+
+    // Now %currentdir% references will be replaced
+    ini.parseLoopups();
+}
+</code></pre>
+
+<h3 id="saving">Saving</h3>
+
+<p>You can save configuration back to file using <code class="highlighter-rouge">section.save(string filename)</code>, with some limitations:</p>
+
+<ul>
+  <li>Comments will be lost</li>
+  <li>Indentation will be lost</li>
+  <li>Key order may change</li>
+  <li>Resolved key references are lost (resolved values will be written instead).</li>
+  <li>Inherited sections are lost (inherited sections are written).</li>
+</ul>
+
+
+        <div class="edit-page">
+            <a href="https://github.com/robik/dini/master/blob/docs/pages/usage.md">Edit this page</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="container">
+        <a href="https://github.com/robik/dini">GitHub Repository</a>
+        <a href="https://github.com/robik/dini/issues/new">Report an issue</a>
+        <a href="https://code.dlang.org/packages/dini">DUB package</a>
+    </div>
+</footer>
+
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+</body>
+</html>
