@@ -324,11 +324,27 @@ struct IniSection
         parseString(data, doLookups);
     }
 
-    public void parseString(string data, bool doLookups = true) 
+    public void parseWith(Reader)(string filename, bool doLookups = true)
+    {
+        parseStringWith!Reader(readText(filename), doLookups);
+    }
+
+    public void parseWith(Reader)(File* file, bool doLookups = true)
+    {
+        string data = file.byLine().join().to!string;
+        parseStringWith!Reader(data, doLookups);
+    }
+
+    public void parseString(string data, bool doLookups = true)
+    {
+        parseStringWith!UniversalINIReader(data, doLookups);
+    }
+
+    public void parseStringWith(Reader)(string data, bool doLookups = true)
     {
         IniSection* section = &this;
 
-        auto reader = UniversalINIReader(data);
+        auto reader = Reader(data);
         alias KeyType = reader.KeyType;
         while (reader.next()) switch (reader.type) with (INIToken) {
             case SECTION:
@@ -464,7 +480,8 @@ struct IniSection
 
         file.close();
     }
-    
+
+
     /**
      * Parses Ini file
      *
@@ -481,10 +498,34 @@ struct IniSection
         return i;
     }
 
+
+    /**
+     * Parses Ini file with specified reader
+     *
+     * Params:
+     *  filename = Path to ini file
+     *
+     * Returns:
+     *  IniSection root
+     */
+    static Ini ParseWith(Reader)(string filename, bool parseLookups = true)
+    {
+        Ini i;
+        i.parseWith!Reader(filename, parseLookups);
+        return i;
+    }
+
     static Ini ParseString(string data, bool parseLookups = true)
     {
         Ini i;
         i.parseString(data, parseLookups);
+        return i;
+    }
+
+    static Ini ParseStringWith(Reader)(string data, bool parseLookups = true)
+    {
+        Ini i;
+        i.parseStringWith!Reader(data, parseLookups);
         return i;
     }
 }
@@ -627,4 +668,17 @@ EOF";
 	ini.parseString(data);
 
 	assert(ini["section"].getKey("name") == "verify");
+}
+
+
+unittest {
+    import dini.reader;
+
+    alias MyReader = INIReader!(
+        UniversalINIFormat,
+        UniversalINIReader.CurrentFlags & ~INIFlags.ProcessEscapes,
+        UniversalINIReader.CurrentBoxer
+    );
+    auto ini = Ini.ParseStringWith!MyReader(`path=C:\Path`);
+    assert(ini("path") == `C:\Path`);
 }
