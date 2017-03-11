@@ -39,7 +39,7 @@ struct IniSection
     protected IniSection*    _parent;
     
     /// Childs
-    protected IniSection[]   _sections;
+    protected IniSection[string] _sections;
     
     /// Keys
     protected string[string] _keys;
@@ -158,7 +158,13 @@ struct IniSection
      */
     public void addSection(ref IniSection section)
     {
-        _sections ~= section;
+        if (hasSection(section._name)) {
+            foreach (key; section._keys.keys) {
+                _sections[section._name]._keys[key] = section._keys[key];
+            }
+        } else {
+	        _sections[section._name] = section;
+        }
     }
     
     /**
@@ -172,12 +178,9 @@ struct IniSection
      */
     public bool hasSection(string name)
     {
-        foreach(ref section; _sections)
-        {
-            if(section.name() == name)
-                return true;
+        if (name in _sections) {
+            return true;
         }
-        
         return false;
     }
     
@@ -192,13 +195,10 @@ struct IniSection
      */
     public ref IniSection getSection(string name)
     {
-        foreach(ref section; _sections)
-        {
-            if(section.name() == name)
-                return section;
+        if (!(hasSection(name))) {
+            throw new IniException("Section '"~name~"' does not exists");
         }
-        
-        throw new IniException("Section '"~name~"' does not exists");
+        return _sections[name];
     }
     
     
@@ -213,15 +213,10 @@ struct IniSection
      */
     public void removeSection(string name)
     {
-        IniSection[] childs;
-        
-        foreach(section; _sections)
-        {
-            if(section.name != name)
-                childs ~= section;
+        if (!(hasSection(name))) {
+            return;
         }
-        
-        _sections = childs;
+        _sections.remove(name);
     }
     
     /**
@@ -247,12 +242,12 @@ struct IniSection
     }
     
     /**
-     * Array of sections
+     * Associative array of sections
      *
      * Returns:
      *  Array of sections
      */
-    public IniSection[] sections() @property
+    public IniSection[string] sections() @property
     {
         return _sections;
     }
@@ -405,7 +400,6 @@ struct IniSection
                         }
                         
                         newValue = sect.getSectionEx(parts[0..$-1].join(".").idup).getKey(parts[$-1].idup);
-                        
                         value.replaceInPlace(start, i+1, newValue);
                         start = -1;
                         buf = [];
@@ -454,9 +448,10 @@ struct IniSection
      */
     public void inherit(IniSection sect)
     {
-        this._keys = sect.keys().dup;
+        foreach (key; sect._keys.keys) {
+            this._keys[key] = sect._keys[key].dup;
+        }
     }
-
 
     public void save(string filename)
     {
