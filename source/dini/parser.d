@@ -13,12 +13,20 @@ import std.algorithm : min, max, countUntil;
 import std.array     : split, replaceInPlace, join;
 import std.file      : readText;
 import std.stdio     : File;
-import std.string    : strip, splitLines;
+import std.string    : strip, splitLines, format;
 import std.traits    : isSomeString;
 import std.range     : ElementType;
-import std.conv      : to;
+import std.conv      : to, text;
 import dini.reader   : UniversalINIReader, INIException, INIToken;
 
+
+class DuplicateKeyException : IniException{
+    //A la Python's configparser.DuplicateOptionError
+    this(string sectionName, string keyName){
+        super(format(
+            "Duplicate keys were found while reading section '%s'; key '%s' already exists", sectionName, keyName));
+    }
+}
 
 /**
  * Represents ini section
@@ -33,19 +41,19 @@ struct IniSection
 {
     /// Section name
     protected string         _name = "root";
-    
+
     /// Parent
     /// Null if none
     protected IniSection*    _parent;
-    
+
     /// Childs
     protected IniSection[]   _sections;
-    
+
     /// Keys
     protected string[string] _keys;
-    
-    
-    
+
+
+
     /**
      * Creates new IniSection instance
      *
@@ -57,8 +65,8 @@ struct IniSection
         _name = name;
         _parent = null;
     }
-    
-    
+
+
     /**
      * Creates new IniSection instance
      *
@@ -71,7 +79,7 @@ struct IniSection
         _name = name;
         _parent = parent;
     }
-    
+
     /**
      * Sets section key
      *
@@ -83,7 +91,7 @@ struct IniSection
     {
         _keys[name] = value;
     }
-    
+
     /**
      * Checks if specified key exists
      *
@@ -91,13 +99,13 @@ struct IniSection
      *  name = Key name
      *
      * Returns:
-     *  True if exists, false otherwise 
+     *  True if exists, false otherwise
      */
     public bool hasKey(string name) @safe nothrow @nogc
     {
         return (name in _keys) !is null;
     }
-    
+
     /**
      * Gets key value
      *
@@ -115,14 +123,14 @@ struct IniSection
         if(!hasKey(name)) {
             throw new IniException("Key '"~name~"' does not exists");
         }
-        
+
         return _keys[name];
     }
-    
-    
+
+
     /// ditto
     alias getKey opCall;
-    
+
     /**
      * Gets key value or defaultValue if key does not exist
      *
@@ -138,7 +146,7 @@ struct IniSection
     {
         return hasKey(name) ? _keys[name] : defaultValue;
     }
-    
+
     /**
      * Removes key
      *
@@ -149,7 +157,7 @@ struct IniSection
     {
         _keys.remove(name);
     }
-    
+
     /**
      * Adds section
      *
@@ -160,7 +168,7 @@ struct IniSection
     {
         _sections ~= section;
     }
-    
+
     /**
      * Checks if specified section exists
      *
@@ -168,7 +176,7 @@ struct IniSection
      *  name = Section name
      *
      * Returns:
-     *  True if exists, false otherwise 
+     *  True if exists, false otherwise
      */
     public bool hasSection(string name)
     {
@@ -177,10 +185,10 @@ struct IniSection
             if(section.name() == name)
                 return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * Returns reference to section
      *
@@ -197,14 +205,14 @@ struct IniSection
             if(section.name() == name)
                 return section;
         }
-        
+
         throw new IniException("Section '"~name~"' does not exists");
     }
-    
-    
+
+
     /// ditto
     public alias getSection opIndex;
-    
+
     /**
      * Removes section
      *
@@ -214,16 +222,16 @@ struct IniSection
     public void removeSection(string name)
     {
         IniSection[] childs;
-        
+
         foreach(section; _sections)
         {
             if(section.name != name)
                 childs ~= section;
         }
-        
+
         _sections = childs;
     }
-    
+
     /**
      * Section name
      *
@@ -234,7 +242,7 @@ struct IniSection
     {
         return _name;
     }
-    
+
     /**
      * Array of keys
      *
@@ -245,7 +253,7 @@ struct IniSection
     {
         return _keys;
     }
-    
+
     /**
      * Array of sections
      *
@@ -256,20 +264,20 @@ struct IniSection
     {
         return _sections;
     }
-    
+
     /**
      * Root section
      */
     public IniSection root() @property
     {
         IniSection s = this;
-        
+
         while(s.getParent() != null)
             s = *(s.getParent());
-        
+
         return s;
     }
-    
+
     /**
      * Section parent
      *
@@ -280,7 +288,7 @@ struct IniSection
     {
         return _parent;
     }
-    
+
     /**
      * Checks if current section has parent
      *
@@ -291,7 +299,7 @@ struct IniSection
     {
         return _parent != null;
     }
-    
+
     /**
      * Moves current section to another one
      *
@@ -304,14 +312,14 @@ struct IniSection
         _parent = &parent;
         parent.addSection(this);
     }
-    
-    
+
+
     /**
      * Parses filename
      *
      * Params:
      *  filename = Configuration filename
-     *  doLookups = Should variable lookups be resolved after parsing? 
+     *  doLookups = Should variable lookups be resolved after parsing?
      */
     public void parse(string filename, bool doLookups = true)
     {
@@ -343,41 +351,54 @@ struct IniSection
     public void parseStringWith(Reader)(string data, bool doLookups = true)
     {
         IniSection* section = &this;
+        IniSection* parentSection = null;
 
         auto reader = Reader(data);
         alias KeyType = reader.KeyType;
         while (reader.next()) switch (reader.type) with (INIToken) {
             case SECTION:
+                if (parentSection){
+                    section.inherit(*parentSection);
+                    parentSection = null;
+                }
                 section = &this;
                 string name = reader.value.get!string;
                 auto parts = name.split(":");
 
                 // [section : parent]
-                if (parts.length > 1)
+                if (parts.length > 1){
                     name = parts[0].strip;
-
-                IniSection child = IniSection(name, section);
-
-                if (parts.length > 1) {
-                    string parent = parts[1].strip;
-                    child.inherit(section.getSectionEx(parent));
+                    auto parent = parts[1].strip;
+                    parentSection = &section.getSectionEx(parent);
                 }
-                section.addSection(child);
+
+                IniSection newSection = IniSection(name, section);
+                section.addSection(newSection);
                 section = &section.getSection(name);
                 break;
 
             case KEY:
-                section.setKey(reader.value.get!KeyType.name, reader.value.get!KeyType.value);
+                auto key = reader.value.get!KeyType.name;
+                auto val = reader.value.get!KeyType.value;
+                if (section.hasKey(key)){
+                    throw new DuplicateKeyException(section.name, text(key));
+                }
+                section.setKey(key, val);
                 break;
 
             default:
                 break;
         }
+        if (parentSection){
+            section.inherit(*parentSection);
+            parentSection = null;
+        }
 
-        if(doLookups == true)
+        if(doLookups == true){
             parseLookups();
+        }
     }
-    
+
     /**
      * Parses lookups
      */
@@ -387,14 +408,14 @@ struct IniSection
         {
             ptrdiff_t start = -1;
             char[] buf;
-            
+
             foreach (i, c; value) {
                 if (c == '%') {
                     if (start != -1) {
                         IniSection sect;
                         string newValue;
                         char[][] parts;
-                        
+
                         if (buf[0] == '.') {
                             parts = buf[1..$].split(".");
                             sect = this.root;
@@ -403,9 +424,9 @@ struct IniSection
                             parts = buf.split(".");
                             sect = this;
                         }
-                        
+
                         newValue = sect.getSectionEx(parts[0..$-1].join(".").idup).getKey(parts[$-1].idup);
-                        
+
                         value.replaceInPlace(start, i+1, newValue);
                         start = -1;
                         buf = [];
@@ -419,12 +440,12 @@ struct IniSection
                 }
             }
         }
-        
+
         foreach(child; _sections) {
             child.parseLookups();
         }
     }
-    
+
     /**
      * Returns section by name in inheriting(names connected by dot)
      *
@@ -434,18 +455,17 @@ struct IniSection
      * Returns:
      *  Section
      */
-    public IniSection getSectionEx(string name)
+    public ref IniSection getSectionEx(string name)
     {
         IniSection* root = &this;
         auto parts = name.split(".");
-        
+
         foreach(part; parts) {
             root = (&root.getSection(part));
         }
-        
         return *root;
     }
-    
+
     /**
      * Inherits keys from section
      *
@@ -454,7 +474,12 @@ struct IniSection
      */
     public void inherit(IniSection sect)
     {
-        this._keys = sect.keys().dup;
+        //we only ammend keys which we don't already have
+        foreach (k,v; sect.keys()){
+            if (k !in _keys){
+                _keys[k] = v;
+            }
+        }
     }
 
 
@@ -540,26 +565,26 @@ alias IniSection Ini;
 ///
 Struct siphon(Struct)(Ini ini)
 {
-	import std.traits;
-	Struct ans;
-	if(ini.hasSection(Struct.stringof))
-		foreach(ti, Name; FieldNameTuple!(Struct))
-		{
-			alias ToType = typeof(ans.tupleof[ti]);
-			if(ini[Struct.stringof].hasKey(Name))
-				ans.tupleof[ti] = to!ToType(ini[Struct.stringof].getKey(Name));
-		}
-	return ans;
+    import std.traits;
+    Struct ans;
+    if(ini.hasSection(Struct.stringof))
+        foreach(ti, Name; FieldNameTuple!(Struct))
+        {
+            alias ToType = typeof(ans.tupleof[ti]);
+            if(ini[Struct.stringof].hasKey(Name))
+                ans.tupleof[ti] = to!ToType(ini[Struct.stringof].getKey(Name));
+        }
+    return ans;
 }
 
 unittest {
-	struct Section {
-		int var;
-	}
+    struct Section {
+        int var;
+    }
 
-	auto ini = Ini.ParseString("[Section]\nvar=3");
-	auto m = ini.siphon!Section;
-	assert(m.var == 3);
+    auto ini = Ini.ParseString("[Section]\nvar=3");
+    auto m = ini.siphon!Section;
+    assert(m.var == 3);
 }
 
 
@@ -634,7 +659,7 @@ EOF";
 }
 
 unittest {
-	auto data = q"EOF
+    auto data = q"EOF
 [def]
 name1=value1
 name2=value2
@@ -647,27 +672,27 @@ EOF";
     auto ini = Ini.ParseString(data, true);
 
     assert(ini["foo"].getKey("name1")
-	  == "Name1 from foo. Lookup for def.name2: value2");
+      == "Name1 from foo. Lookup for def.name2: value2");
 }
 
 unittest {
-	auto data = q"EOF
+    auto data = q"EOF
 [section]
 name=%value%
 EOF";
 
-	// Create ini struct instance
-	Ini ini;
-	Ini iniSec = IniSection("section");
-	ini.addSection(iniSec);
+    // Create ini struct instance
+    Ini ini;
+    Ini iniSec = IniSection("section");
+    ini.addSection(iniSec);
 
-	// Set key value
-	ini["section"].setKey("value", "verify");
+    // Set key value
+    ini["section"].setKey("value", "verify");
 
-	// Now, you can use value in ini file
-	ini.parseString(data);
+    // Now, you can use value in ini file
+    ini.parseString(data);
 
-	assert(ini["section"].getKey("name") == "verify");
+    assert(ini["section"].getKey("name") == "verify");
 }
 
 
@@ -681,4 +706,55 @@ unittest {
     );
     auto ini = Ini.ParseStringWith!MyReader(`path=C:\Path`);
     assert(ini("path") == `C:\Path`);
+}
+
+unittest {
+    auto data = q"EOF
+[sect]
+user=u1
+pass=pppp
+user=u2
+EOF";
+    try{
+        auto ini = Ini.ParseString(data);
+        assert(false, "successfully parsed a section with duplicate keys");
+    } catch (DuplicateKeyException){}
+}
+
+unittest {
+    auto data = q"EOF
+[foo]
+a=b
+c=d
+[bar : foo]
+EOF";
+    auto ini = Ini.ParseString(data);
+    assert(ini["foo"].getKey("c") == "d");
+    assert(ini["foo"].keys == ini["bar"].keys);
+}
+unittest {
+    auto data = q"EOF
+[foo]
+user=u1
+a=b
+
+[bar : foo]
+pass=pppp
+user=u2
+
+[baz : bar]
+user=u3
+EOF";
+    auto ini = Ini.ParseString(data);
+    assert(ini["foo"].getKey("user") == "u1");
+    assert(ini["bar"].getKey("user") == "u2");
+    assert(ini["baz"].getKey("user") == "u3");
+
+    assert(ini["foo"].getKey("a") == "b");
+    assert(ini["bar"].getKey("a") == "b");
+    assert(ini["baz"].getKey("a") == "b");
+
+    assert(!ini["foo"].hasKey("pass"));
+    assert(ini["bar"].getKey("pass") == "pppp");
+    assert(ini["baz"].getKey("pass") == "pppp");
 }
